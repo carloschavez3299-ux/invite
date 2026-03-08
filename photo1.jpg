@@ -1,0 +1,348 @@
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Calendar,
+  Camera,
+  CheckCircle2,
+  Clock,
+  Heart,
+  Languages,
+  Mail,
+  Map,
+  MapPin,
+  Music,
+  Sparkles,
+  Users,
+} from 'lucide-react';
+
+const weddingDate = new Date('2027-09-17T17:00:00');
+const rsvpEmail = 'carlosralva3299@icloud.com';
+const rsvpDeadlineDisplay = 'April 4, 2026';
+const venueName = 'Dreams Jade';
+const venueQuery = 'Dreams Jade Resort & Spa, Puerto Morelos, Quintana Roo, Mexico';
+
+const img1 = '/images/photo1.jpg';
+const img2 = '/images/photo2.jpg';
+const img3 = '/images/photo3.jpg';
+
+type RSVPResponse = {
+  name: string;
+  attending: string;
+  guestCount: string;
+  message: string;
+  submittedAt: string;
+};
+
+function useCountdown(targetDate: Date) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const diff = Math.max(targetDate.getTime() - now.getTime(), 0);
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  return { days, hours, minutes, seconds };
+}
+
+function buildMailtoHref(params: {
+  email: string;
+  guestName: string;
+  attending: string;
+  guestCount: string;
+  message: string;
+}) {
+  const subject = `Wedding RSVP - ${params.guestName || 'Guest'}`;
+  const body = [
+    `Name / Nombre: ${params.guestName || 'N/A'}`,
+    `Attending / Asistencia: ${params.attending === 'yes' ? 'Yes / Sí' : params.attending === 'no' ? 'No' : 'Pending / Pendiente'}`,
+    `Guest Count / Número de invitados: ${params.guestCount || 'N/A'}`,
+    `Message / Mensaje: ${params.message || 'N/A'}`,
+  ].join('\n');
+
+  return `mailto:${params.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function getDirectionsUrl() {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueQuery)}`;
+}
+
+function formatCountdown(days: number, hours: number, minutes: number, seconds: number) {
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
+
+export default function App() {
+  const { days, hours, minutes, seconds } = useCountdown(weddingDate);
+  const [guestName, setGuestName] = useState('');
+  const [guestCount, setGuestCount] = useState('2');
+  const [attending, setAttending] = useState('');
+  const [message, setMessage] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
+  const [responses, setResponses] = useState<RSVPResponse[]>([]);
+
+  const formattedDateEnglish = useMemo(
+    () =>
+      weddingDate.toLocaleString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+    []
+  );
+
+  const formattedDateSpanish = useMemo(
+    () =>
+      weddingDate.toLocaleString('es-MX', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+    []
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const newResponse: RSVPResponse = {
+      name: guestName || 'Guest',
+      attending: attending || 'pending',
+      guestCount: guestCount || '0',
+      message: message || '',
+      submittedAt: new Date().toLocaleString(),
+    };
+
+    setResponses((prev) => [newResponse, ...prev]);
+    window.location.href = buildMailtoHref({ email: rsvpEmail, guestName, attending, guestCount, message });
+    setConfirmed(true);
+  };
+
+  return (
+    <div className="page-shell">
+      <section className="hero" style={{ backgroundImage: `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url(${img1})` }}>
+        <div className="hero-overlay" />
+        <div className="container hero-grid">
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="hero-copy">
+            <div className="pill"><Sparkles size={16} /> English & Español</div>
+            <div>
+              <p className="eyebrow">Wedding Invitation · Invitación de Boda</p>
+              <h1>Anadalay <span>&</span> Carlos</h1>
+              <p className="lead">
+                Together with our families, we invite you to celebrate our wedding day.<br />
+                Junto con nuestras familias, te invitamos a celebrar nuestro día especial.
+              </p>
+            </div>
+            <div className="info-grid two">
+              <InfoPillDark icon={<Calendar size={16} />} label="Date · Fecha" value="September 17, 2027" />
+              <InfoPillDark icon={<MapPin size={16} />} label="Venue · Lugar" value={venueName} />
+            </div>
+            <div className="countdown-banner">
+              <div className="countdown-title"><Clock size={16} /> Live Countdown · Cuenta Regresiva</div>
+              <div className="countdown-text">{formatCountdown(days, hours, minutes, seconds)}</div>
+            </div>
+            <div className="button-row">
+              <button className="btn btn-primary" onClick={() => document.getElementById('rsvp')?.scrollIntoView({ behavior: 'smooth' })}>Confirm Attendance · Confirmar Asistencia</button>
+              <button className="btn btn-secondary" onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}>View Photos · Ver Fotos</button>
+              <button className="btn btn-secondary" onClick={() => window.open(getDirectionsUrl(), '_blank', 'noopener,noreferrer')}>Open Map · Abrir Mapa</button>
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.1 }}>
+            <div className="card card-glass">
+              <div className="feature-image-wrap">
+                <img src={img2} alt="Anadalay and Carlos engagement portrait" className="feature-image" />
+                <div className="feature-caption">
+                  <p>Save the Date</p>
+                  <h2>A seaside celebration</h2>
+                  <span>Una celebración junto al mar</span>
+                </div>
+              </div>
+              <div className="card-pad info-grid two">
+                <InfoPill icon={<Calendar size={16} />} label="Date · Fecha" value="September 17, 2027" />
+                <InfoPill icon={<Clock size={16} />} label="Time · Hora" value="5:00 PM" />
+                <InfoPill icon={<MapPin size={16} />} label="Venue · Lugar" value={venueName} />
+                <InfoPill icon={<Users size={16} />} label="Theme · Tema" value="Black & Yellow" />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="container countdown-cards">
+        <CountdownBox label="Days · Días" value={days} />
+        <CountdownBox label="Hours · Horas" value={hours} />
+        <CountdownBox label="Minutes · Minutos" value={minutes} />
+        <CountdownBox label="Seconds · Segundos" value={seconds} />
+      </section>
+
+      <section className="container section section-dark">
+        <div className="section-header center">
+          <p className="eyebrow">Our Story · Nuestra Historia</p>
+          <h2>A Celebration by the Sea · Una celebración junto al mar</h2>
+        </div>
+        <div className="detail-grid">
+          <DetailCard icon={<Heart size={20} />} title="Our Special Day · Nuestro Día Especial" text={`Join us on ${formattedDateEnglish}. Acompáñanos el ${formattedDateSpanish} para celebrar el amor, la alegría y el comienzo de una nueva etapa.`} />
+          <DetailCard icon={<MapPin size={20} />} title="Venue · Lugar" text="Dreams Jade will be the setting for our celebration. Dreams Jade será el escenario de esta celebración inolvidable. Use the map button to open directions instantly. Usa el botón de mapa para abrir indicaciones al instante." />
+          <DetailCard icon={<Languages size={20} />} title="Bilingual Invitation · Invitación Bilingüe" text="Every main section is written in English and Spanish so all our loved ones can enjoy the invitation together." />
+        </div>
+      </section>
+
+      <section className="container section">
+        <div className="card section-card two-col">
+          <div>
+            <div className="section-title"><Music size={20} /> Celebration Details · Detalles de la Celebración</div>
+            <div className="info-grid two compact-top">
+              <MiniBlock title="Ceremony · Ceremonia">September 17, 2027 · 5:00 PM</MiniBlock>
+              <MiniBlock title="Reception · Recepción">Dinner, dancing, and unforgettable memories · Cena, baile y recuerdos inolvidables</MiniBlock>
+              <MiniBlock title="RSVP Deadline · Fecha Límite">{rsvpDeadlineDisplay}</MiniBlock>
+              <MiniBlock title="RSVP Email · Correo RSVP">{rsvpEmail}</MiniBlock>
+            </div>
+            <div className="map-box">
+              <div className="map-label"><Map size={16} /> Map · Mapa</div>
+              <button className="btn btn-dark" onClick={() => window.open(getDirectionsUrl(), '_blank', 'noopener,noreferrer')}>Get Directions to Dreams Jade · Cómo llegar a Dreams Jade</button>
+            </div>
+            <p className="muted-text">Please confirm your attendance by email using the RSVP section below. Por favor confirma tu asistencia por correo electrónico usando la sección RSVP de abajo.</p>
+          </div>
+
+          <div className="gallery-box">
+            <div className="section-title"><Camera size={20} /> Photo Gallery · Galería</div>
+            <div id="gallery" className="gallery-grid">
+              <div className="gallery-large"><img src={img3} alt="Proposal photo of Anadalay and Carlos" /></div>
+              <div><img src={img1} alt="Beach engagement ring photo" /></div>
+              <div><img src={img2} alt="Close-up engagement photo" /></div>
+            </div>
+            <p className="muted-text">Hosted image files are included in this package for a cleaner, higher-quality invitation. Los archivos de imagen están incluidos en este paquete para una invitación más limpia y de mejor calidad.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="rsvp" className="container section narrow">
+        <div className="card section-card">
+          <div className="section-header center compact-bottom">
+            <p className="eyebrow amber">RSVP</p>
+            <h2>Confirm Your Attendance · Confirma Tu Asistencia</h2>
+            <p className="subtle">Fill out the form and click the button to send your RSVP by email.<br />Llena el formulario y haz clic en el botón para enviar tu confirmación por correo.</p>
+          </div>
+
+          {!confirmed ? (
+            <form onSubmit={handleSubmit} className="form-grid">
+              <label>
+                <span>Full name · Nombre completo</span>
+                <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Enter your name · Escribe tu nombre" required />
+              </label>
+
+              <div className="form-two">
+                <label>
+                  <span>Will you attend? · ¿Asistirás?</span>
+                  <select value={attending} onChange={(e) => setAttending(e.target.value)} required>
+                    <option value="">Select response · Selecciona una respuesta</option>
+                    <option value="yes">Yes, happily attending · Sí, con gusto asistiré</option>
+                    <option value="no">Regretfully declines · Con pena no podré asistir</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Number of guests · Número de invitados</span>
+                  <input type="number" min="1" max="10" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} required />
+                </label>
+              </div>
+
+              <label>
+                <span>Message · Mensaje</span>
+                <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Leave a note for the couple · Déjale un mensaje a la pareja" rows={4} />
+              </label>
+
+              <button type="submit" className="btn btn-dark btn-full"><Mail size={16} /> Send RSVP Email · Enviar Confirmación</button>
+            </form>
+          ) : (
+            <div className="confirmation-box">
+              <CheckCircle2 size={48} />
+              <h3>Thank you · Gracias{guestName ? `, ${guestName}` : ''}!</h3>
+              <p>Your email confirmation is ready to send to <strong>{rsvpEmail}</strong>.<br />Tu confirmación por correo está lista para enviarse a <strong>{rsvpEmail}</strong>.</p>
+              {message ? <p className="message-quote">“{message}”</p> : null}
+              <button className="btn btn-outline-dark" onClick={() => setConfirmed(false)}>Edit Response · Editar Respuesta</button>
+            </div>
+          )}
+
+          <div className="tracker-box">
+            <div className="section-title"><Users size={20} /> Guest RSVP Tracker · Registro de Confirmaciones</div>
+            {responses.length === 0 ? (
+              <p className="muted-text">No RSVP responses submitted in this preview yet. Aún no hay respuestas enviadas en esta vista previa.</p>
+            ) : (
+              <div className="tracker-list">
+                {responses.map((response, index) => (
+                  <div key={`${response.name}-${index}`} className="tracker-item">
+                    <div className="tracker-head">
+                      <p>{response.name}</p>
+                      <span>{response.submittedAt}</span>
+                    </div>
+                    <p>Attendance · Asistencia: {response.attending}</p>
+                    <p>Guests · Invitados: {response.guestCount}</p>
+                    {response.message ? <p className="message-quote">“{response.message}”</p> : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <footer className="site-footer">Anadalay & Carlos · September 17, 2027 · {venueName}</footer>
+    </div>
+  );
+}
+
+function InfoPillDark({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="info-pill dark">
+      <div className="info-label">{icon}<span>{label}</span></div>
+      <div className="info-value">{value}</div>
+    </div>
+  );
+}
+
+function InfoPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="info-pill light">
+      <div className="info-label">{icon}<span>{label}</span></div>
+      <div className="info-value dark-text">{value}</div>
+    </div>
+  );
+}
+
+function CountdownBox({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="countdown-box">
+      <div className="countdown-number">{String(value).padStart(2, '0')}</div>
+      <div className="countdown-label">{label}</div>
+    </div>
+  );
+}
+
+function DetailCard({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="detail-card">
+      <div className="detail-icon">{icon}</div>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
+
+function MiniBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mini-block">
+      <div className="mini-title">{title}</div>
+      <div className="mini-value">{children}</div>
+    </div>
+  );
+}
